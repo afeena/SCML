@@ -1,0 +1,35 @@
+1. Requirements
+python3
+numpy
+(pip3)
+
+To install numpy run:
+
+$ pip3 install numpy
+
+Test and training data should be in ./data folder
+
+
+2. Run parameters estimator
+
+$ python3 parameter_estimator.py
+
+Output file: parameters.txt
+
+3. Run classifier
+
+$ python3 classify.py
+$
+empirical error rate:  0.19531639262580966
+===confusion_matrix===
+[[ 257.    2.    0.    5.    0.    0.    3.    2.    5.    0.]
+ [   0.  139.    5.    5.    1.    3.    0.    2.    0.    1.]
+ [   0.    9.  133.    0.    9.    0.    0.   10.    0.    1.]
+ [   3.   18.    0.  150.    7.    4.    6.    5.   15.    4.]
+ [   0.    3.    7.    1.  119.    3.    0.    5.    1.    0.]
+ [   3.    3.    1.    5.    1.  139.    0.    0.    0.   47.]
+ [   0.    2.    2.    3.    0.    0.  112.    2.    7.    1.]
+ [   1.   16.    8.    2.    6.    1.    1.  128.    4.   11.]
+ [   0.    1.    3.   28.    7.    0.   25.    6.  145.    1.]
+ [   0.    5.    7.    1.   10.   20.    0.    6.    0.  293.]]
+======================
