@@ -23,20 +23,23 @@ def read_data(filename):
 def test(means, cov, priors):
     k, d, X, Y_true = read_data('data/usps.test')
 
-
     predicted = []
-    
-    for x, y in zip(X, Y_true):
+    dets = np.zeros(k)
+    inversed_cov = np.zeros((k,d,d))
+    for ki in range(k):
+        det = np.linalg.slogdet(cov[ki])[1]
+        dets[ki] = det
+        cov_inv = np.linalg.inv(cov[ki])
+        inversed_cov[ki] = cov_inv
 
+    for x, y in zip(X, Y_true):
         pred_prob = []
         for ki in range(k):
-            cov_inv = np.linalg.inv(cov[ki])
-            eex = -0.5*np.dot(np.dot(np.subtract(x, means[ki]), cov_inv), np.subtract(x, means[ki]))
-            det = np.linalg.slogdet(cov[ki])[1]
-            dist = -(d/2)*np.log(2*np.pi)-0.5*det + eex
+            eex = -0.5*np.dot(np.dot(np.subtract(x, means[ki]), inversed_cov[ki]), np.subtract(x, means[ki]))
+            dist = -(d/2)*np.log(2*np.pi)-0.5*dets[ki] + eex
             prob = priors[ki] * dist
             pred_prob.append(prob)
-        m=max(pred_prob)
+        m=min(pred_prob)
         predicted.append(pred_prob.index(m)+1)
 
     conf_matrix = np.zeros((k, k))
@@ -63,7 +66,6 @@ def test_full_covariance(means, cov, priors):
             eex = math.exp(
                 -0.5 * (
                 np.dot(np.dot(np.subtract(x, means[ki]), cov_inv), np.subtract(x, means[ki]))))
-            #dist = (1/(((2*np.pi)**d/2)*np.linalg.det(cov)))*eex
             prob = priors[ki] * eex
 
             pred_prob.append(prob)
