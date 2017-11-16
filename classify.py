@@ -37,9 +37,9 @@ def test(means, cov, priors):
         for ki in range(k):
             eex = -0.5*np.dot(np.dot(np.subtract(x, means[ki]), inversed_cov[ki]), np.subtract(x, means[ki]))
             dist = -(d/2)*np.log(2*np.pi)-0.5*dets[ki] + eex
-            prob = priors[ki] * dist
+            prob = np.log(priors[ki]) + dist
             pred_prob.append(prob)
-        m=min(pred_prob)
+        m=max(pred_prob)
         predicted.append(pred_prob.index(m)+1)
 
     conf_matrix = np.zeros((k, k))
@@ -115,10 +115,11 @@ if __name__ == "__main__":
 
     cs_diag_cov_mat, cs_cov_mat, pooled_diag_cov,pooled_full,means, priors = parameter_estimator.train()
     #test(means,cs_cov_mat, priors)
-    l=0.1
-    new_full_cov = np.zeros((10,256,256))
-    for i,cov_k in enumerate(cs_cov_mat):
-        n = l*pooled_full+(1-l)*cov_k
-        new_full_cov[i,:,:] = n
-    test(means, new_full_cov, priors)
+    l=[1, 0.5, 0.1, 0.01, 10e-3,10e-4,10e-5,10e-6]
+    for ll in l:
+        new_full_cov = np.zeros((10,256,256))
+        for i,cov_k in enumerate(cs_cov_mat):
+            n = ll*pooled_full+(1-ll)*cov_k
+            new_full_cov[i,:,:] = n
+        test(means, new_full_cov, priors)
     test_full_covariance(means, pooled_full, priors)
