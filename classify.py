@@ -1,6 +1,8 @@
 import numpy as np
 import math
 import parameter_estimator
+import matplotlib.pyplot as plt
+from matplotlib.ticker import NullFormatter
 
 def read_data(filename):
     X = []
@@ -24,11 +26,11 @@ def test(means, cov, priors):
     k, d, X, Y_true = read_data('data/usps.test')
 
     predicted = []
-    dets = np.zeros(k)
+    dets = []
     inversed_cov = np.zeros((k,d,d))
     for ki in range(k):
-        det = np.linalg.slogdet(cov[ki])[1]
-        dets[ki] = det
+        det = np.linalg.slogdet(cov[ki])
+        dets.append(det)
         cov_inv = np.linalg.inv(cov[ki])
         inversed_cov[ki] = cov_inv
 
@@ -36,7 +38,7 @@ def test(means, cov, priors):
         pred_prob = []
         for ki in range(k):
             eex = -0.5*np.dot(np.dot(np.subtract(x, means[ki]), inversed_cov[ki]), np.subtract(x, means[ki]))
-            dist = -(d/2)*np.log(2*np.pi)-0.5*dets[ki] + eex
+            dist = -0.5*d*np.log(2*np.pi)-0.5*dets[ki][0]*dets[ki][1] + eex
             prob = np.log(priors[ki]) + dist
             pred_prob.append(prob)
         m=max(pred_prob)
@@ -52,11 +54,10 @@ def test(means, cov, priors):
 
     err = error / len(X)
     print("empirical error rate: ", err)
-    print("===confusion_matrix===")
-    print(conf_matrix)
-    print("======================")
+    return err
 
-def test_full_covariance(means, cov, priors):
+
+def test_pooled_covariance(means, cov, priors):
     k, d, X, Y_true = read_data('data/usps.test')
     cov_inv = np.linalg.inv(cov)
     predicted = []
@@ -108,18 +109,33 @@ def read_params():
                 break
     return means, sigmas, priors
 
-
-if __name__ == "__main__":
-
-   # means, sigmas, priors = read_params()
-
-    cs_diag_cov_mat, cs_cov_mat, pooled_diag_cov,pooled_full,means, priors = parameter_estimator.train()
-    #test(means,cs_cov_mat, priors)
+def test_lambda(cs_diag_cov_mat, cs_cov_mat, pooled_diag_cov,pooled_full,means, priors):
     l=[1, 0.5, 0.1, 0.01, 10e-3,10e-4,10e-5,10e-6]
+    errors = []
     for ll in l:
         new_full_cov = np.zeros((10,256,256))
         for i,cov_k in enumerate(cs_cov_mat):
             n = ll*pooled_full+(1-ll)*cov_k
             new_full_cov[i,:,:] = n
-        test(means, new_full_cov, priors)
-    test_full_covariance(means, pooled_full, priors)
+        print("lambda: ",ll)
+        err = test(means, new_full_cov, priors)
+        errors.append(err*100)
+
+    fig, axs = plt.subplots(1, 1, sharex=True)
+    fig.subplots_adjust(left=0.08, right=0.98, wspace=0.3)
+    axs.plot(l,errors)
+    axs.set_xscale('log')
+    axs.set_title('error-lambda')
+    plt.show()
+
+if __name__ == "__main__":
+    cs_diag_cov_mat, cs_cov_mat, pooled_diag_cov, pooled_full, means, priors = parameter_estimator.train()
+
+    print("full pooled covariance:")
+    test_pooled_covariance(means,pooled_full,priors)
+
+    print("diagonal pooled covariance:")
+    test_pooled_covariance(means, pooled_diag_cov, priors)
+
+    test_lambda(cs_diag_cov_mat, cs_cov_mat, pooled_diag_cov, pooled_full, means, priors)
+
