@@ -111,7 +111,8 @@ def softmax(x, deriv=False):
     :return:
     '''
     if deriv:
-        return (np.ones(x.shape) - softmax(x)) * softmax(x)
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum()
     else:
         s = np.array([np.e**xi for xi in x])
         return s/sum(s)
