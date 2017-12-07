@@ -139,6 +139,8 @@ class Layer:
         :return: None
         """
         self.weights = np.array([np.array(np.random.randn(self.no) / np.sqrt(self.no)) for _ in range(self.ni)])
+        #self.weights = np.random.rand(self.weights.shape[0],self.weights.shape[1])
+        #self.weights = (2/self.weights.size) * np.random.randn(self.weights.shape[0],self.weights.shape[1])
 
 
     def inference(self, x):
