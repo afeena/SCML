@@ -138,9 +138,9 @@ class Layer:
         You can search the literature for possible initialization methods.
         :return: None
         """
-        self.weights = np.array([np.array(np.random.randn(self.no) / np.sqrt(self.no)) for _ in range(self.ni)])
-        #self.weights = np.random.rand(self.weights.shape[0],self.weights.shape[1])
-        #self.weights = (2/self.weights.size) * np.random.randn(self.weights.shape[0],self.weights.shape[1])
+        self.weights = np.random.randn(self.ni,self.no) / np.sqrt(self.ni)
+        #self.weights = np.random.rand(self.ni,self.no)
+        #self.weights = np.sqrt(2.0/self.weights.size) * np.random.randn(self.ni,self.no)
 
 
     def inference(self, x):
@@ -172,18 +172,18 @@ class Layer:
         :rtype: np.array
         """
         grad = np.matrix(error*self.activation(self.last_output,deriv=True)).T*self.last_input
-        biases = np.matrix(error*self.activation(self.last_output,deriv=True))
+        biases = error*self.activation(self.last_output,deriv=True).T
         error_back = np.zeros(len(self.last_input))
         for i,_ in enumerate(error_back):
             for k,_ in enumerate(error):
                 error_back[i]+=error[k]*self.activation(np.array([self.last_output[k]]),deriv=True)[0]*self.weights[i,k]
 
-        return error_back,grad,self.biases
+        return error_back,grad,biases
 
 
 class BasicNeuralNetwork():
-    def __init__(self, layer_sizes=[5], num_input=4, num_output=3, num_epoch=200, learning_rate=0.1,
-                 mini_batch_size=0):
+    def __init__(self, layer_sizes=[5], num_input=4, num_output=3, num_epoch=50, learning_rate=0.1,
+                 mini_batch_size=8):
         self.layers = []
         self.ls = layer_sizes
         self.ni = num_input
@@ -264,9 +264,12 @@ class BasicNeuralNetwork():
         k = dataset.num_classes
         for s in ds:
            error = self.ce_delta(s,k)
-           for i,l in enumerate(reversed(self.layers)):
+           i = len(self.layers) - 1
+           for l in reversed(self.layers):
                 error, weights, biases = l.backprop(error)
-                self.layers[-(i+1)].weights = l.weights - self.lr*weights.T
+                self.layers[i].weights = np.subtract(self.layers[i].weights,self.lr*weights.T)
+                self.layers[i].biases = np.subtract(self.layers[i].biases, self.lr * biases)
+                i -= 1
 
 
 
@@ -277,7 +280,7 @@ class BasicNeuralNetwork():
         :param dataset:
         :return: None
         """
-        batches = dataset.get_mini_batches(self.mbs)
+        batches = dataset.get_mini_batches(self.mbs, shuffle=True)
         for ds_mini in batches:
             error = self.ce_delta(ds_mini,dataset.num_classes)
             i=len(self.layers)-1
@@ -294,14 +297,11 @@ class BasicNeuralNetwork():
         :return: None
         """
         ci = self.ni
-        self.ls.append(self.no)
         for l in self.ls:
-            if l!=self.ls[-1]:
-                activation = sigmoid
-            else:
-                activation = softmax
-            self.layers.append(Layer(ci,l, activation=activation))
+            self.layers.append(Layer(ci,l, activation=sigmoid))
             ci=l
+
+        self.layers.append(Layer(ci, self.no, activation=softmax))
 
     def ce(self, dataset):
         ce = 0
