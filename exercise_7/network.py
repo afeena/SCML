@@ -111,11 +111,10 @@ def softmax(x, deriv=False):
     :return:
     '''
     if deriv:
-        e_x = np.exp(x - np.max(x))
-        return e_x / e_x.sum()
+        return (np.ones(x.shape) - softmax(x)) * softmax(x)
     else:
-        s = np.array([np.e**xi for xi in x])
-        return s/sum(s)
+        e_x = np.exp(x)
+        return e_x / e_x.sum()
 
 
 class Layer:
@@ -140,7 +139,8 @@ class Layer:
         :return: None
         """
         self.weights = np.random.randn(self.ni,self.no) / np.sqrt(self.ni)
-        #self.weights = np.random.rand(self.ni,self.no)
+        #self.weights = np.ones((self.ni,self.no))
+        #self.weights = np.random.randn(self.ni, self.no)
         #self.weights = np.sqrt(2.0/self.weights.size) * np.random.randn(self.ni,self.no)
 
 
@@ -174,11 +174,8 @@ class Layer:
         """
         grad = np.matrix(error*self.activation(self.last_output,deriv=True)).T*self.last_input
         biases = error*self.activation(self.last_output,deriv=True).T
-        error_back = np.zeros(len(self.last_input))
-        for i,_ in enumerate(error_back):
-            for k,_ in enumerate(error):
-                error_back[i]+=error[k]*self.activation(np.array([self.last_output[k]]),deriv=True)[0]*self.weights[i,k]
-
+        error_back = np.matrix(error*self.activation(self.last_output,deriv=True))*self.weights.T
+        error_back = np.ravel(error_back)
         return error_back,grad,biases
 
 
@@ -261,10 +258,8 @@ class BasicNeuralNetwork():
         :param dataset:
         :return: None
         """
-        ds = dataset.get_mini_batches(1)
-        k = dataset.num_classes
-        for s in ds:
-           error = self.ce_delta(s,k)
+        for x in dataset:
+           error = self.ce_delta(x)
            i = len(self.layers) - 1
            for l in reversed(self.layers):
                 error, weights, biases = l.backprop(error)
@@ -283,13 +278,22 @@ class BasicNeuralNetwork():
         """
         batches = dataset.get_mini_batches(self.mbs, shuffle=True)
         for ds_mini in batches:
-            error = self.ce_delta(ds_mini,dataset.num_classes)
-            i=len(self.layers)-1
-            for l in reversed(self.layers):
-                error, weights, biases = l.backprop(error)
-                self.layers[i].weights = np.subtract(self.layers[i].weights,self.lr*weights.T)
-                self.layers[i].biases = np.subtract(self.layers[i].biases, self.lr * biases)
-                i-=1
+            W = [np.zeros(l.weights.shape) for l in self.layers]
+            b = [np.zeros(l.biases.shape) for l in self.layers]
+            for X,Y in zip(ds_mini[0],ds_mini[1]):
+                error = self.ce_delta([X,Y])
+                i=len(self.layers)-1
+                for l in reversed(self.layers):
+                    error, weights, biases = l.backprop(error)
+                    W[i]+=weights.T
+                    b[i]+=biases
+                    i -= 1
+            for i,l in enumerate(self.layers):
+                self.layers[i].weights = np.subtract(l.weights,(self.lr/self.mbs)*W[i])
+                self.layers[i].biases = np.subtract(l.biases, (self.lr / self.mbs) * b[i])
+
+
+
 
     def constructNetwork(self):
         """
@@ -312,15 +316,11 @@ class BasicNeuralNetwork():
 
         return ce / dataset.num_obs
 
-    def ce_delta(self,dataset, k):
-        ce = np.zeros(k)
-        num_s = 0
-        for x, t in zip(dataset[0],dataset[1]):
-            t_hat = self.forward(x)
-            ce += t_hat - t
-            num_s+=1
+    def ce_delta(self,dataset):
+        t_hat = self.forward(dataset[0])
+        ce = t_hat - dataset[1]
 
-        return ce / num_s
+        return ce
 
     def accuracy(self, dataset):
         cm = np.zeros(shape=[dataset.num_classes, dataset.num_classes], dtype=np.int)
