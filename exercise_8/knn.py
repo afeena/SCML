@@ -8,8 +8,6 @@ class KNN:
         self.classes = None
         self.proirs = None
 
-    def distance(self,v1,v2):
-        np.linalg.norm(v1-v2)
 
     def train(self,fn):
         Nk,self.obs,self.classes = self.read_data(fn)
@@ -22,24 +20,33 @@ class KNN:
     def test(self, fn):
         Nk, Xt, Yt = self.read_data(fn)
         error = 0
-        for xn,yn in zip(Xt, Yt):
-            c = self.classify(xn)
-            if c!=yn:
-                error+=1
-                print(error)
+        c = self.classify_matrix(Xt)
+        error = sum([1 for t,cn in zip(Yt,c) if t!=cn])
+
+        #     if c!=yn:
+        #         error+=1
+        #         print(error)
         test_error = error/len(Xt)
         print(test_error)
 
-    def classify(self, v):
-        distances = []
-        for xn,yn in zip(self.obs,self.classes):
-            d = np.linalg.norm(v - xn)*self.proirs[yn]
-            distances.append((d,yn))
-        distances = sorted(distances, key=lambda tup: tup[0])[0:self.k]
-        nearest_classes = [d[1] for d in distances]
-        c = Counter(nearest_classes)
-        return c.most_common(1)[0][0]
+    def classify_one(self, v):
+        result = np.zeros((1,))
+        d = np.linalg.norm(self.obs - xn, axis=1) * [self.proirs[yn] for yn in self.classes]
+        sorted_ind = np.argsort(d)[1:self.k]
+        c = Counter(self.classes[sorted_ind])
+        res = c.most_common(1)[0][0]
+        result[0] = res
+        return result
 
+    def classify_matrix(self, X):
+        result = np.zeros((X.shape[0],))
+        for i,xn in enumerate(X):
+            d = np.linalg.norm(self.obs - xn, axis=1)*[self.proirs[yn] for  yn in self.classes]
+            sorted_ind = np.argsort(d)[1:self.k]
+            c = Counter(self.classes[sorted_ind])
+            res = c.most_common(1)[0][0]
+            result[i] = res
+        return result
 
     def read_data(self, filename):
         X = []
@@ -74,4 +81,4 @@ if __name__=="__main__":
     k = args.k
     knn = KNN(k)
     knn.train(args.train_data)
-    knn.test(args.train_data)
+    knn.test(args.test_data)
